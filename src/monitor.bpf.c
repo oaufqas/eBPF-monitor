@@ -3,6 +3,8 @@
 #include <bpf/bpf_core_read.h>
 #include "common.h"
 
+#define MAX_ARG_LOOP 10
+
 char LICENSE[] SEC("license") = "GPL";
 
 struct {
@@ -12,24 +14,72 @@ struct {
 
 
 SEC("tracepoint/syscalls/sys_enter_execve")
-int handle_execve(void *ctx) {
+int handle_execve(struct trace_event_raw_sys_enter *ctx) {
     u32 uid = (u32)bpf_get_current_uid_gid();
 
-    struct event_data *e;
-    e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
-    if (!e) {
-        return 0;
-    }
+    struct event_data *e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
+    if (!e) return 0;
 
     (*e).pid = bpf_get_current_pid_tgid() >> 32;
     (*e).uid = uid;
     (*e).type = EVENT_EXEC;
 
-    bpf_get_current_comm((*e).comm, sizeof((*e).comm));
+    const char *filename_ptr = (const char *)ctx->args[0];
+    bpf_probe_read_user_str((*e).path, sizeof(e->path), filename_ptr);
 
-    struct trace_event_raw_sys_enter *args = ctx;
-    const char *filename_ptr = (const char *)(*args).args[0];
-    bpf_probe_read_user_str((*e).path, sizeof((*e).path), filename_ptr);
+
+    const char **argv_base = (const char **)ctx->args[1];
+    u32 offset = 0;
+
+    char tmp[MAX_ARGS_LEN];
+    
+    #pragma unroll
+    for (u32 i = 1; i < MAX_ARG_LOOP; i++) {
+        const char *arg_ptr = NULL;
+
+        long err = bpf_probe_read_user(&arg_ptr, sizeof(arg_ptr), argv_base + i);
+
+        if (arg_ptr == NULL || offset > MAX_ARGS_LEN - 2) {
+            break;
+        }
+
+        if (offset >= sizeof(e->args) - 1) {
+            break;
+        }
+        
+        // if (offset > 0) {
+        //     e->args[offset] = ' ';
+        //     offset++;
+        // }
+        
+        // u32 remaining_space = sizeof(e->args) - offset;
+
+
+        long bytes = bpf_probe_read_user_str(tmp, sizeof(tmp), arg_ptr);
+
+        if (bytes <= 0) {
+            // if (offset > 1) {
+            //     offset--;
+            // }
+            break;
+        }
+
+        u32 n = bytes - 1;
+        if (n == 0) continue;
+
+        if (offset > 0 && offset < sizeof(e->args) - 1) {
+            e->args[offset++] = ' ';
+        }
+
+        #pragma unroll
+        for (u32 j = 0; j < MAX_ARGS_LEN; j++) {
+            if (j < n && offset < sizeof(e->args) - 1) e->args[offset++] = tmp[j];
+        }
+    }
+
+    if (offset == 0) {
+        __builtin_memcpy((*e).args, "none", 5); 
+    }
 
     bpf_ringbuf_submit(e, 0);
     return 0;
@@ -69,7 +119,7 @@ int handle_openat(void *ctx) {
         return 0;
     }
 
-    bpf_get_current_comm((*e).comm, sizeof((*e).comm));
+    bpf_get_current_comm((*e).args, sizeof((*e).args));
 
     (*e).pid = bpf_get_current_pid_tgid() >> 32;
     (*e).uid = uid;

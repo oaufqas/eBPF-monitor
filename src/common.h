@@ -1,8 +1,8 @@
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#define TASK_COMM_LEN 16
-#define MAX_PATH_LEN 256
+#define MAX_PATH_LEN 200
+#define MAX_ARGS_LEN 64
 
 enum event_type {
     EVENT_EXEC,
@@ -13,8 +13,8 @@ struct event_data {
     unsigned int pid;
     unsigned int uid;
     enum event_type type;
-    char comm[TASK_COMM_LEN];
     char path[MAX_PATH_LEN];
+    char args[MAX_ARGS_LEN];
 };
 
 #endif

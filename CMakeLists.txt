@@ -7,9 +7,12 @@ find_program(CLANG_EXT executable NAMES clang REQUIRED)
 find_program(BPFTOOL_EXT executable NAMES bpftool REQUIRED)
 
 set(BPF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/monitor.bpf.c)
-set(CPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 set(BPF_OBJ ${CMAKE_CURRENT_BINARY_DIR}/monitor.bpf.o)
 set(BPF_SKEL ${CMAKE_CURRENT_BINARY_DIR}/monitor.skel.h)
+
+set(CPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+set(CPP_CTX ${CMAKE_CURRENT_SOURCE_DIR}/src/app_context.cpp)
+set(CPP_PROM ${CMAKE_CURRENT_SOURCE_DIR}/src/prometheus-exporter.cpp)
 
 add_custom_command(
     OUTPUT ${BPF_OBJ}
@@ -28,7 +31,11 @@ add_custom_command(
 
 add_custom_target(bpf_target DEPENDS ${BPF_SKEL})
 
-add_executable(ebpf-monitor ${CPP_SRC})
+add_executable(ebpf-monitor 
+    ${CPP_SRC}
+    ${CPP_CTX}
+    ${CPP_PROM}
+)
 add_dependencies(ebpf-monitor bpf_target)
 
 target_link_libraries(ebpf-monitor PRIVATE bpf elf)
