@@ -39,30 +39,12 @@ int handle_execve(struct trace_event_raw_sys_enter *ctx) {
 
         long err = bpf_probe_read_user(&arg_ptr, sizeof(arg_ptr), argv_base + i);
 
-        if (arg_ptr == NULL || offset > MAX_ARGS_LEN - 2) {
-            break;
-        }
-
-        if (offset >= sizeof(e->args) - 1) {
-            break;
-        }
-        
-        // if (offset > 0) {
-        //     e->args[offset] = ' ';
-        //     offset++;
-        // }
-        
-        // u32 remaining_space = sizeof(e->args) - offset;
-
+        if (arg_ptr == NULL || offset > MAX_ARGS_LEN - 2) break;
+        if (offset >= sizeof(e->args) - 1) break;
 
         long bytes = bpf_probe_read_user_str(tmp, sizeof(tmp), arg_ptr);
 
-        if (bytes <= 0) {
-            // if (offset > 1) {
-            //     offset--;
-            // }
-            break;
-        }
+        if (bytes <= 0) break;
 
         u32 n = bytes - 1;
         if (n == 0) continue;

@@ -41,8 +41,6 @@ int handle_event(void *ctx, void *data, size_t data_sz) {
     if (data_sz < sizeof(struct event_data)) return 0;
 
     auto *e = static_cast<struct event_data*>(data);
-    // e->comm[TASK_COMM_LEN - 1] = '\0';
-    // e->path[MAX_PATH_LEN - 1] = '\0';
 
     std::string_view path(e->path);
 
@@ -55,7 +53,7 @@ int handle_event(void *ctx, void *data, size_t data_sz) {
             app_ctx.metrics_sudo_actions++;
             console_log(true, "[SUDO ACTION EXEC]", e->pid, e->uid, e->path, e->args);
         } else {
-            // console_log("[EXEC]", e->pid, e->uid, e->comm, e->path);
+            if (app_ctx.extended_logs) console_log(true, "[EXEC]", e->pid, e->uid, e->path, e->args);
         }
     }
 
@@ -68,7 +66,7 @@ int handle_event(void *ctx, void *data, size_t data_sz) {
             app_ctx.metrics_root_actions++;
             console_log(false, "[ROOT OPEN]", e->pid, e->uid, e->path, e->args);
         } else {
-            // console_log("[OPEN]", e->pid, e->uid, e->comm, e->path);
+            if (app_ctx.extended_logs) console_log(false, "[OPEN]", e->pid, e->uid, e->path, e->args);
         }
     }
     return 0;

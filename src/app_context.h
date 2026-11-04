@@ -5,6 +5,8 @@
 
 struct AppContext {
     volatile bool keep_running = true;
+    const bool extended_logs = false;
+
     const int PORT = 4444;
     const in_addr_t ADDR = INADDR_ANY;
 
