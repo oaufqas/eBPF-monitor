@@ -44,7 +44,7 @@
 │                          │                             │
 │                          ▼                             │
 │  ┌───────────────────────────────────────────────────┐ │
-│  │ BPF_MAP_TYPE_RINGBUF "rb" (256 KB)                │ │
+│  │ BPF_MAP_TYPE_RINGBUF "rb" (8 Mb)                  │ │
 │  └───────────────────────┬───────────────────────────┘ │
 └──────────────────────────┼─────────────────────────────┘
                            │ epoll-уведомление
@@ -210,8 +210,7 @@ ebpf_sensitive_files_opened_total 2
 #ifndef __COMMON_H
 #define __COMMON_H
 
-#define TASK_COMM_LEN 16
-#define MAX_PATH_LEN  256
+#define MAX_PATH_LEN  200
 #define MAX_ARGS_LEN  64
 
 enum event_type {
@@ -223,14 +222,13 @@ struct event_data {
     unsigned int    pid;
     unsigned int    uid;
     enum event_type type;
-    char            comm[TASK_COMM_LEN];
     char            path[MAX_PATH_LEN];
     char            args[MAX_ARGS_LEN];
 };
 
 #endif
 ```
-Размер: 4 + 4 + 4 + 16 + 256 + 64 = 348 байт. При ringbuf 256 KB помещается 262144 / (348 + 8) ≈ 736 событий одновременно.
+Размер: 4 + 4 + 4 + 200 + 64 = 276 байт. При ringbuf 8Mb(8 * 1024 * 1024) помещается 8388608 / (276 + 8) ≈ 29 537 событий одновременно.
 
 ## Сборка
 
@@ -304,8 +302,20 @@ Dockerfile собирает статически слинкованный ebpf-m
 
 Бинарник тащит с собой libbpf/libelf/zlib, не зависит от хостовых .so. На сервере с другим дистрибутивом (Ubuntu, Debian, RHEL) достаточно скопировать файл — он запустится.
 
+Команды для компиляции такого бинарника:
 
-## Запуск
+```bash
+docker build . -t ebpf-build
+
+docker create --name ebpf-build ebpf-build
+
+docker cp ebpf-build:/app/ebpf-monitor ./
+
+docker rm ebpf-build
+```
+
+
+## Запуск мониторинга
 
 ```bash
 docker compose up -d
