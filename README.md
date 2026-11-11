@@ -117,7 +117,6 @@ ebpf-monitor/
 ├── docker-compose.yml # agent + prometheus + grafana
 ├── prometheus.yml # конфиг Prometheus
 ├── README.md
-├── vmlinux.h # генерируется, не отслеживается
 ├── build/ # артефакты, не отслеживается
 │
 ├── grafana/
@@ -128,13 +127,14 @@ ebpf-monitor/
 │ └── datasource.yml
 │
 └── src/
-├── common.h # общая структура event_data
-├── monitor.bpf.c # eBPF-программа
-├── main.cpp # точка входа
-├── app_context.h
-├── app_context.cpp
-├── prometheus-exporter.h
-└── prometheus-exporter.cpp
+    ├── common.h # общая структура event_data
+    ├── monitor.bpf.c # eBPF-программа
+    ├── main.cpp # точка входа
+    ├── app_context.h
+    ├── app_context.cpp
+    ├── prometheus-exporter.h
+    ├── prometheus-exporter.cpp
+    └── vmlinux.h # генерируется
 ```
 
 ### Генерируемые файлы

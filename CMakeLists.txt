@@ -18,7 +18,7 @@ add_custom_command(
     OUTPUT ${BPF_OBJ}
     COMMAND ${CLANG_EXT} -g -O2 -target bpf -D__TARGET_ARCH_x86 
             -I${CMAKE_CURRENT_SOURCE_DIR} -c ${BPF_SRC} -o ${BPF_OBJ}
-    DEPENDS ${BPF_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/vmlinux.h
+    DEPENDS ${BPF_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/src/vmlinux.h
     COMMENT "Compilation eBPF kernel code..."
 )
 
