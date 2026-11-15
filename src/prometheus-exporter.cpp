@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "app_context.h"
 
-AppContext& app_ctx = AppContext::get();
+AppContext& app_ctx = AppContext::instance();
 
 
 static void export_metrics(int fd, int epoll_fd) {

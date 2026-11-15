@@ -1,0 +1,26 @@
+[Unit]
+Description=eBPF Monitor
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ebpf-monitor \
+    --config /etc/ebpf-monitor/config.conf 
+
+AmbientCapabilities=CAP_BPF CAP_PERFMON CAP_SYS_ADMIN
+CapabilityBoundingSet=CAP_BPF CAP_PERFMON CAP_SYS_ADMIN
+NoNewPrivileges=true
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/ebpf-monitor
+
+[Install]
+WantedBy=multi-user.target

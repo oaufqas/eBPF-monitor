@@ -96,7 +96,7 @@
 |---|---|
 | Язык | C++17 |
 | Библиотеки | `libbpf` |
-| Задачи | Загрузка BPF, attach, чтение ringbuf, обновление метрик |
+| Задачи | Загрузка BPF, attach, чтение ringbuf, обновление метрик, логирование, чтение конфигурации из файла |
 
 
 ### 3. Prometheus-экспортер — `prometheus-exporter.h/.cpp`
@@ -105,9 +105,10 @@
 |---|---|
 | Язык | C++17 |
 | Транспорт | Сырые сокеты + `epoll` |
-| Порт | 8080 |
+| Порт | 4444 |
 | Эндпоинт | `GET /metrics` |
 
+Порт по умолчанию для экспортера - 4444, поменять параметр `listen_port` можно в `config.conf`;
 
 ## Структура проекта
 ```
@@ -116,6 +117,7 @@ ebpf-monitor/
 ├── Dockerfile # multi-stage сборка
 ├── docker-compose.yml # agent + prometheus + grafana
 ├── prometheus.yml # конфиг Prometheus
+├── config.conf # Параметры для работы приложения
 ├── README.md
 ├── build/ # артефакты, не отслеживается
 │
@@ -315,7 +317,7 @@ docker rm ebpf-build
 ```
 
 
-## Запуск мониторинга
+### Запуск зависимостей
 
 ```bash
 docker compose up -d
@@ -323,8 +325,7 @@ docker compose up -d
 
 | Сервис | Порт | Что делает |
 |---|---|---|
-| agent | 8080 | `eBPF-монитор + экспортер` |
-| prometheus | 9090 | `скрейпит agent:8080/metrics` |
+| prometheus | 9090 | `скрейпит agent:4444/metrics` |
 | grafana | 3000 | `визуализация` |
 
 
@@ -332,10 +333,11 @@ docker compose up -d
 
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (admin/admin)
-- Метрики: http://localhost:8080/metrics
+- Exporter: http://localhost:4444
 
+---
 
-## Почему epoll, а не поток на клиента
+### Почему epoll, а не поток на клиента
 `prometheus_endpoint()` использует `epoll` вместо `std::thread(handle_client, fd).detach()`.
 
 
@@ -354,8 +356,10 @@ Prometheus скрейпит раз в 15 секунд, соединение жи
 
 С epoll: соединение принимается, обслуживается, закрывается в том же потоке, нет pthread_create/join, память и CPU — минимальны.
 
-## Логирование
-`AppContext::console_log(bool always, const char* tag, pid, uid, path, args)`
+
+---
+
+### Логирование
 
 |Режим	| Флаг	| Что пишет |
 |---|---|---|
@@ -363,7 +367,7 @@ Prometheus скрейпит раз в 15 секунд, соединение жи
 |Расширенный|extended_logs = true|Все события, включая [EXEC] и [OPEN]
 
 
-Включение: указазать `extended_logs = true` в `app_context.h`
+Включение: указазать `extended_logs = true` в `config.conf`, перечитывание конфига просходит при запуске программы.
 
 Пример:
 
@@ -374,9 +378,51 @@ Prometheus скрейпит раз в 15 секунд, соединение жи
 [EXEC]                 pid=1111 uid=1000 path=/bin/ls args=-la /tmp
 ```
 
-## Требования
-- Ядро Linux 5.8+ (BPF_MAP_TYPE_RINGBUF)
+---
+
+### Требования
+- Ядро Linux 5.8+ (BPF_MAP_TYPE_RINGBUF), но меньше 7.0.0.42, так как на этих версиях ядра баг работы ebpf программ.
 - BTF: /sys/kernel/btf/vmlinux
 - CONFIG_BPF=y, CONFIG_BPF_SYSCALL=y, CONFIG_BPF_JIT=y
 - Пользователь `root` или capabilities `CAP_BPF`, `CAP_PERFMON`, `CAP_SYS_ADMIN`
 - Docker 20.10+, Docker Compose 2.x
+
+
+### Запуск программы
+
+1) В консоли:
+
+```bash
+sudo ./ebpf-monitor --config /path/to/config.conf
+```
+
+2) Systemd unit:
+
+```ini
+[Unit]
+Description=eBPF Monitor
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ebpf-monitor \
+    --config /etc/ebpf-monitor/config.conf 
+
+AmbientCapabilities=CAP_BPF CAP_PERFMON CAP_SYS_ADMIN
+CapabilityBoundingSet=CAP_BPF CAP_PERFMON CAP_SYS_ADMIN
+NoNewPrivileges=true
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/ebpf-monitor
+
+[Install]
+WantedBy=multi-user.target
+```

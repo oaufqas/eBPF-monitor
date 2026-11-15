@@ -89,12 +89,6 @@ int handle_openat(void *ctx) {
         return 0;
     }
 
-    if (uid == 0) {
-        if (!(path_check[0] == '/' && path_check[1] == 'e' && path_check[2] == 't' && path_check[3] == 'c')) {
-            return 0;
-        }
-    }
-
     struct event_data *e;
     e = bpf_ringbuf_reserve(&rb, sizeof(*e), 0);
     if (!e) {

@@ -9,7 +9,7 @@
 #include "app_context.h"
 #include "prometheus-exporter.h"
 
-static AppContext& app_ctx = AppContext::get();
+static AppContext& app_ctx = AppContext::instance();
 
 void err_handler(const std::string err_log) {
     std::cerr << "[ERR]: " << err_log << std::endl;
@@ -73,7 +73,8 @@ int handle_event(void *ctx, void *data, size_t data_sz) {
 }
 
 
-int main () {
+int main (int argc, char** argv) {
+    AppContext::load_config(argc, argv);
     std::signal(SIGINT, sig_handler);
 
     std::cout << "Starting eBPF monitoring agent..." << std::endl;

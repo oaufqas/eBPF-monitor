@@ -5,10 +5,12 @@
 
 struct AppContext {
     volatile bool keep_running = true;
-    const bool extended_logs = false;
+    bool extended_logs = false;
 
-    const int PORT = 4444;
-    const in_addr_t ADDR = INADDR_ANY;
+    uint16_t PORT = 4444;
+    in_addr_t ADDR = INADDR_ANY;
+
+    // std::string hooks_strategy;
 
     std::atomic<uint64_t> metrics_exec_total{0};
     std::atomic<uint64_t> metrics_open_total{0};
@@ -16,11 +18,15 @@ struct AppContext {
     std::atomic<uint64_t> metrics_root_actions{0};
     std::atomic<uint64_t> sensitive_files_opened{0};
 
-    static AppContext& get();
+    std::string config_path;
 
+    static AppContext& instance();
+    static void load_config(int argc, char** argv);
+    
 private:
     AppContext() = default;
 };
+
 
 struct MetricsName {
     static constexpr std::string_view exec_process = "ebpf_exec_total";
